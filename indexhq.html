@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" content="#0F2D5E"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="RE HQ"/>
+<title>Raghav Enterprises – HQ Dashboard</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.47.0/tabler-icons.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+:root{
+  --navy:#0F2D5E;--navy-md:#1A4080;--navy-lt:#E8EDF7;
+  --saffron:#E8520A;--saffron-lt:#FEF0EA;--saffron-dk:#C04208;
+  --ink:#1C1C2E;--muted:#6B7280;--hint:#9CA3AF;
+  --bg:#F4F6FB;--surface:#FFFFFF;--surface2:#F0F2F8;
+  --border:#E2E6EE;--border-md:#C9D0DE;
+  --green:#16A34A;--green-lt:#DCFCE7;
+  --amber:#D97706;--amber-lt:#FEF3C7;
+  --red:#DC2626;--red-lt:#FEE2E2;
+  --purple:#7C3AED;--purple-lt:#EDE9FE;
+  --rad:14px;--rad-sm:9px;--rad-xs:6px;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+  --font:'Plus Jakarta Sans',sans-serif;
+  --sidebar-w:220px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;overscroll-behavior:none;}
+button,input,select,textarea{font-family:var(--font);}
+img{display:block;}
+
+/* ── Layout ── */
+#app{display:flex;height:100dvh;overflow:hidden;}
+
+/* ── Sidebar ── */
+.sidebar{width:var(--sidebar-w);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;padding-top:var(--safe-top);}
+.sidebar-brand{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-brand .co{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.2px;}
+.sidebar-brand .sub{font-size:10px;color:rgba(255,255,255,.5);margin-top:2px;}
+.sidebar-brand .hq-badge{display:inline-block;background:var(--saffron);color:#fff;font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:6px;letter-spacing:.04em;}
+.nav-items{flex:1;padding:12px 8px;overflow-y:auto;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--rad-sm);cursor:pointer;color:rgba(255,255,255,.6);font-size:13px;font-weight:500;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;transition:all .15s;}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff;}
+.nav-item.active{background:rgba(255,255,255,.15);color:#fff;}
+.nav-item i{font-size:18px;flex-shrink:0;}
+.nav-badge{margin-left:auto;background:var(--saffron);color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;}
+.sidebar-footer{padding:12px 8px;border-top:1px solid rgba(255,255,255,.1);}
+
+/* ── Main content ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0;}
+.topbar-title{font-size:18px;font-weight:700;flex:1;}
+.content{flex:1;overflow-y:auto;padding:20px;}
+
+/* ── Mobile nav (hidden on desktop) ── */
+.mobile-topbar{display:none;background:var(--navy);color:#fff;padding:calc(10px + var(--safe-top)) 14px 10px;align-items:center;gap:10px;flex-shrink:0;}
+.mobile-nav{display:none;background:var(--surface);border-top:1px solid var(--border);padding-bottom:var(--safe-bot);flex-shrink:0;}
+.mnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:var(--muted);}
+.mnav-btn.active{color:var(--saffron);}
+.mnav-btn i{font-size:20px;}
+
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .mobile-topbar{display:flex;}
+  .mobile-nav{display:flex;}
+  .content{padding:12px;}
+  .topbar{display:none;}
+  .stat-grid{grid-template-columns:1fr 1fr!important;}
+}
+
+/* ── Stat cards ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+.stat-card{background:var(--surface);border-radius:var(--rad);border:1px solid var(--border);padding:16px 18px;}
+.stat-card .label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.stat-card .value{font-size:26px;font-weight:700;color:var(--ink);}
+.stat-card .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.stat-card.accent{background:var(--navy);border-color:var(--navy);}
+.stat-card.accent .label{color:rgba(255,255,255,.6);}
+.stat-card.accent .value{color:#fff;}
+.stat-card.accent .sub{color:rgba(255,255,255,.5);}
+
+/* ── Cards ── */
+.card{background:var(--surface);border-radius:var(--rad);border:1px solid var(--border);overflow:hidden;margin-bottom:14px;}
+.card-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.card-head h3{font-size:14px;font-weight:700;flex:1;}
+.card-body{padding:16px;}
+
+/* ── Quote rows ── */
+.quote-row{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
+.quote-row:last-child{border-bottom:none;}
+.quote-row:hover{background:var(--surface2);}
+.qr-ref{font-size:12px;font-weight:700;color:var(--navy);min-width:80px;}
+.qr-customer{flex:1;min-width:0;}
+.qr-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.qr-meta{font-size:11px;color:var(--muted);}
+.qr-amount{font-size:14px;font-weight:700;color:var(--saffron);text-align:right;min-width:90px;}
+.qr-date{font-size:11px;color:var(--muted);text-align:right;min-width:70px;}
+
+/* ── Status badges ── */
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;text-transform:uppercase;letter-spacing:.04em;}
+.badge-pending{background:var(--amber-lt);color:var(--amber);}
+.badge-approved{background:var(--navy-lt);color:var(--navy);}
+.badge-sent{background:var(--green-lt);color:var(--green);}
+.badge-won{background:var(--green-lt);color:var(--green);}
+.badge-lost{background:var(--red-lt);color:var(--red);}
+.badge-draft{background:var(--surface2);color:var(--muted);}
+
+/* ── Buttons ── */
+.btn{border:none;border-radius:var(--rad-sm);padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--saffron);color:#fff;}
+.btn-navy{background:var(--navy);color:#fff;}
+.btn-ghost{background:transparent;border:1px solid var(--border-md);color:var(--ink);}
+.btn-green{background:var(--green);color:#fff;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-block{width:100%;padding:12px;}
+.btn-wa{background:#25D366;color:#fff;border:none;border-radius:var(--rad-sm);padding:12px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;}
+
+/* ── Forms ── */
+.form-group{margin-bottom:14px;}
+.form-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:5px;}
+.form-control{width:100%;border:1px solid var(--border-md);border-radius:var(--rad-sm);padding:10px 12px;font-size:14px;background:var(--surface);color:var(--ink);outline:none;transition:border-color .15s;}
+.form-control:focus{border-color:var(--navy);}
+textarea.form-control{resize:vertical;min-height:70px;line-height:1.5;}
+select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* ── Table ── */
+.data-table{width:100%;border-collapse:collapse;}
+.data-table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface2);}
+.data-table td{font-size:13px;padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+.data-table tr:last-child td{border-bottom:none;}
+.data-table tr:hover td{background:var(--surface2);}
+.data-table .actions{display:flex;gap:6px;}
+
+/* ── Quote detail modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:var(--rad);width:100%;max-width:760px;box-shadow:0 8px 32px rgba(0,0,0,.15);margin:auto;}
+.modal-head{background:var(--navy);color:#fff;padding:16px 20px;border-radius:var(--rad) var(--rad) 0 0;display:flex;align-items:center;gap:10px;}
+.modal-head h2{font-size:16px;font-weight:700;flex:1;}
+.modal-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;}
+.modal-body{padding:20px;}
+.modal-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ── Line item editor ── */
+.li-row{display:grid;grid-template-columns:2fr 60px 80px 70px 70px 40px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);}
+.li-row:last-child{border-bottom:none;}
+.li-head{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;}
+.li-name{font-size:13px;font-weight:600;}
+.li-sub{font-size:11px;color:var(--muted);}
+.li-input{border:1px solid var(--border-md);border-radius:var(--rad-xs);padding:5px 8px;font-size:13px;width:100%;text-align:right;background:var(--saffron-lt);color:var(--saffron-dk);font-weight:600;}
+.li-total{font-size:13px;font-weight:700;color:var(--saffron);text-align:right;}
+
+/* ── Total bar ── */
+.total-bar{background:var(--navy);border-radius:var(--rad-sm);padding:14px 16px;color:#fff;margin-top:12px;}
+.tb-row{display:flex;justify-content:space-between;font-size:12px;opacity:.75;padding:2px 0;}
+.tb-grand{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid rgba(255,255,255,.2);margin-top:8px;padding-top:10px;}
+.tb-grand .lbl{font-size:13px;opacity:.85;}
+.tb-grand .amt{font-size:22px;font-weight:700;}
+
+/* ── Section head ── */
+.sec-head{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:16px 0 8px;}
+
+/* ── Product thumb ── */
+.prod-thumb{width:40px;height:40px;border-radius:8px;object-fit:cover;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0;}
+.prod-thumb img{width:100%;height:100%;object-fit:cover;}
+
+/* ── Empty ── */
+.empty{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty i{font-size:40px;display:block;margin-bottom:10px;color:var(--border-md);}
+
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1C1C2E;color:#fff;font-size:13px;font-weight:600;padding:10px 20px;border-radius:24px;z-index:9999;opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── Report charts ── */
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:600px){.report-grid{grid-template-columns:1fr;}}
+.report-card{background:var(--surface);border-radius:var(--rad);border:1px solid var(--border);padding:16px;}
+.report-card h4{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+.bar-label{font-size:12px;color:var(--ink);min-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:4px;background:var(--saffron);transition:width .4s;}
+.bar-val{font-size:12px;font-weight:700;color:var(--ink);min-width:60px;text-align:right;}
+.status-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
+.status-row:last-child{border-bottom:none;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ SIDEBAR (desktop) ══ -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div class="co">RAGHAV ENTERPRISES</div>
+    <div class="sub">TD Building, TD Road, Ernakulam</div>
+    <div class="hq-badge">HQ DASHBOARD</div>
+  </div>
+  <div class="nav-items">
+    <button class="nav-item active" onclick="showSection('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</button>
+    <button class="nav-item" onclick="showSection('quotes')">
+      <i class="ti ti-file-invoice"></i>Quotes
+      <span class="nav-badge" id="pending-badge" style="display:none;">0</span>
+    </button>
+    <button class="nav-item" onclick="showSection('products')"><i class="ti ti-package"></i>Products</button>
+    <button class="nav-item" onclick="showSection('customers')"><i class="ti ti-users"></i>Customers</button>
+    <button class="nav-item" onclick="showSection('reports')"><i class="ti ti-chart-bar"></i>Reports</button>
+  </div>
+  <div class="sidebar-footer">
+    <button class="nav-item" onclick="loadAll()"><i class="ti ti-refresh"></i>Refresh data</button>
+  </div>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main">
+
+  <!-- Mobile topbar -->
+  <div class="mobile-topbar">
+    <span style="font-size:15px;font-weight:700;color:#fff;flex:1;">RE HQ Dashboard</span>
+    <button onclick="loadAll()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;"><i class="ti ti-refresh"></i></button>
+  </div>
+
+  <!-- Desktop topbar -->
+  <div class="topbar">
+    <span class="topbar-title" id="section-title">Dashboard</span>
+    <button class="btn btn-primary btn-sm" onclick="showSection('quotes')">
+      <i class="ti ti-file-invoice"></i> Pending Quotes <span id="topbar-badge"></span>
+    </button>
+  </div>
+
+  <!-- ── SECTION: DASHBOARD ── -->
+  <div class="content" id="sec-dashboard">
+    <div class="stat-grid">
+      <div class="stat-card accent">
+        <div class="label">Pending Quotes</div>
+        <div class="value" id="stat-pending">—</div>
+        <div class="sub">Awaiting HQ action</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Quotes This Month</div>
+        <div class="value" id="stat-month">—</div>
+        <div class="sub">All statuses</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Total Customers</div>
+        <div class="value" id="stat-customers">—</div>
+        <div class="sub">In database</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Products Active</div>
+        <div class="value" id="stat-products">—</div>
+        <div class="sub">In catalogue</div>
+      </div>
+    </div>
+
+    <!-- Recent pending quotes -->
+    <div class="card">
+      <div class="card-head">
+        <i class="ti ti-clock" style="color:var(--amber);font-size:18px;"></i>
+        <h3>Pending Quotes — Needs Action</h3>
+      </div>
+      <div id="dash-pending-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
+    </div>
+
+    <!-- Recent sent quotes -->
+    <div class="card">
+      <div class="card-head">
+        <i class="ti ti-check" style="color:var(--green);font-size:18px;"></i>
+        <h3>Recently Sent</h3>
+      </div>
+      <div id="dash-sent-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION: QUOTES ── -->
+  <div class="content" id="sec-quotes" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <select class="form-control" id="quote-filter" onchange="renderQuotes()" style="max-width:160px;">
+        <option value="all">All quotes</option>
+        <option value="pending" selected>Pending</option>
+        <option value="approved">Approved</option>
+        <option value="sent">Sent</option>
+        <option value="won">Won</option>
+        <option value="lost">Lost</option>
+      </select>
+      <input class="form-control" type="search" id="quote-search" placeholder="Search customer or ref..." oninput="renderQuotes()" style="flex:1;min-width:180px;"/>
+    </div>
+    <div class="card">
+      <div id="quotes-list"></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION: PRODUCTS ── -->
+  <div class="content" id="sec-products" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+      <input class="form-control" type="search" id="prod-search" placeholder="Search products..." oninput="renderProducts()" style="flex:1;min-width:180px;"/>
+      <button class="btn btn-primary btn-sm" onclick="openProductModal()"><i class="ti ti-plus"></i> Add product</button>
+    </div>
+    <div class="card">
+      <table class="data-table" id="prod-table">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Category</th>
+            <th>Base price</th>
+            <th>GST</th>
+            <th>Price incl. GST</th>
+            <th>HSN</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="prod-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION: CUSTOMERS ── -->
+  <div class="content" id="sec-customers" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;">
+      <input class="form-control" type="search" id="cust-search" placeholder="Search customers..." oninput="renderCustomers()" style="flex:1;min-width:180px;"/>
+      <button class="btn btn-primary btn-sm" onclick="openCustomerModal()"><i class="ti ti-plus"></i> Add customer</button>
+    </div>
+    <div class="card">
+      <table class="data-table">
+        <thead>
+          <tr><th>Company</th><th>Contact</th><th>Phone</th><th>GSTIN</th><th>City</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="cust-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── SECTION: REPORTS ── -->
+  <div class="content" id="sec-reports" style="display:none;">
+    <div class="report-grid">
+      <div class="report-card">
+        <h4>Quote status breakdown</h4>
+        <div id="report-status"></div>
+      </div>
+      <div class="report-card">
+        <h4>Top products quoted</h4>
+        <div id="report-products"></div>
+      </div>
+    </div>
+    <div class="report-grid">
+      <div class="report-card">
+        <h4>Top customers by quote value</h4>
+        <div id="report-customers"></div>
+      </div>
+      <div class="report-card">
+        <h4>Monthly quote activity</h4>
+        <div id="report-monthly"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <div class="mobile-nav">
+    <button class="mnav-btn active" onclick="showSection('dashboard')"><i class="ti ti-layout-dashboard"></i>Home</button>
+    <button class="mnav-btn" onclick="showSection('quotes')"><i class="ti ti-file-invoice"></i>Quotes</button>
+    <button class="mnav-btn" onclick="showSection('products')"><i class="ti ti-package"></i>Products</button>
+    <button class="mnav-btn" onclick="showSection('customers')"><i class="ti ti-users"></i>Customers</button>
+    <button class="mnav-btn" onclick="showSection('reports')"><i class="ti ti-chart-bar"></i>Reports</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ QUOTE DETAIL MODAL ══ -->
+<div class="modal-overlay" id="quote-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modal-title">Quote Details</h2>
+      <span class="badge" id="modal-status-badge"></span>
+      <button class="modal-close" onclick="closeModal('quote-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ══ PRODUCT MODAL ══ -->
+<div class="modal-overlay" id="product-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="prod-modal-title">Add product</h2>
+      <button class="modal-close" onclick="closeModal('product-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">Product name *</label>
+          <input class="form-control" type="text" id="pm-name" placeholder="e.g. Industrial Pump A200"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <input class="form-control" type="text" id="pm-cat" placeholder="Pumps, Valves…"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-control" id="pm-desc" placeholder="Specifications, features…"></textarea>
+      </div>
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">Base price (₹) *</label>
+          <input class="form-control" type="number" id="pm-price" placeholder="0.00" oninput="updateProdPreview()"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">GST rate</label>
+          <select class="form-control" id="pm-gst" onchange="updateProdPreview()">
+            <option value="0">0%</option><option value="5">5%</option>
+            <option value="12">12%</option><option value="18" selected>18%</option>
+            <option value="28">28%</option>
+          </select>
+        </div>
+      </div>
+      <div style="background:var(--navy-lt);border-radius:var(--rad-sm);padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;font-size:13px;">
+        <span style="color:var(--muted);">Total incl. GST</span>
+        <span style="font-weight:700;color:var(--saffron);" id="pm-total">₹0.00</span>
+      </div>
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">HSN / SAC code</label>
+          <input class="form-control" type="text" id="pm-hsn" placeholder="e.g. 8413"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Unit</label>
+          <input class="form-control" type="text" id="pm-unit" placeholder="piece, kg, set…"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveProductModal()"><i class="ti ti-check"></i> Save product</button>
+      <button class="btn btn-ghost" onclick="closeModal('product-modal')">Cancel</button>
+      <button class="btn btn-red" id="pm-delete-btn" style="display:none;margin-left:auto;" onclick="deleteProductModal()"><i class="ti ti-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CUSTOMER MODAL ══ -->
+<div class="modal-overlay" id="customer-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="cust-modal-title">Add customer</h2>
+      <button class="modal-close" onclick="closeModal('customer-modal')"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">Company name *</label>
+          <input class="form-control" type="text" id="cm-company" placeholder="Abad Builders Pvt. Ltd."/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Contact person</label>
+          <input class="form-control" type="text" id="cm-contact" placeholder="Mr. Ravi Kumar"/>
+        </div>
+      </div>
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">Phone / WhatsApp</label>
+          <input class="form-control" type="tel" id="cm-phone" placeholder="+91 98765 43210"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input class="form-control" type="email" id="cm-email" placeholder="ravi@company.com"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">GSTIN</label>
+        <input class="form-control" type="text" id="cm-gstin" placeholder="29XXXXX1234X1Z5" style="text-transform:uppercase;"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Billing address</label>
+        <textarea class="form-control" id="cm-billing" placeholder="Full billing address…"></textarea>
+      </div>
+      <div class="input-row">
+        <div class="form-group">
+          <label class="form-label">City</label>
+          <input class="form-control" type="text" id="cm-city" placeholder="Ernakulam"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pincode</label>
+          <input class="form-control" type="text" id="cm-pin" placeholder="682035"/>
+        </div>
+      </div>
+      <div class="sec-head">Delivery sites</div>
+      <div id="cm-sites-list" style="margin-bottom:10px;"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addSiteField()"><i class="ti ti-plus"></i> Add delivery site</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="saveCustomerModal()"><i class="ti ti-check"></i> Save customer</button>
+      <button class="btn btn-ghost" onclick="closeModal('customer-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── Supabase ──
+const SUPA_URL = 'https://cuxfvbtvmosmgvptygjy.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN1eGZ2YnR2bW9zbWd2cHR5Z2p5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA1MDk5NzYsImV4cCI6MjA5NjA4NTk3Nn0.tuSqeeKONTldWAX1mDwXJAuIjs3o2amcNbfvns-OH4o';
+const supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const COMPANY      = 'RAGHAV ENTERPRISES';
+const COMPANY_ADDR = 'TD Building, TD Road, Ernakulam – 682035';
+const COMPANY_GSTIN= '32AAKFR8673C1Z3';
+const HQ_PHONE     = '919495935258';
+
+// ── State ──
+let allQuotes    = [];
+let allProducts  = [];
+let allCustomers = [];
+let editProdId   = null;
+let editCustId   = null;
+let activeSites  = [];
+
+// ── Helpers ──
+function fmt(n){ return '₹' + Number(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(()=>t.classList.remove('show'),2400);
+}
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function statusBadge(s){ return `<span class="badge badge-${s}">${s}</span>`; }
+function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—'; }
+
+// ── Navigation ──
+function showSection(id){
+  ['dashboard','quotes','products','customers','reports'].forEach(s=>{
+    document.getElementById('sec-'+s).style.display = s===id ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(id==='dashboard'?'dash':id));
+  });
+  document.querySelectorAll('.mnav-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(id==='dashboard'?'home':id));
+  });
+  const titles = {dashboard:'Dashboard',quotes:'Quotes',products:'Products',customers:'Customers',reports:'Reports'};
+  document.getElementById('section-title').textContent = titles[id];
+  if(id==='quotes')    renderQuotes();
+  if(id==='products')  renderProducts();
+  if(id==='customers') renderCustomers();
+  if(id==='reports')   renderReports();
+}
+
+// ── Load all data ──
+async function loadAll(){
+  toast('Refreshing...');
+  await Promise.all([loadQuotes(), loadProducts(), loadCustomers()]);
+  renderDashboard();
+  toast('Data refreshed');
+}
+
+async function loadQuotes(){
+  const { data } = await supa.from('quotes').select(`
+    *, customers(company_name,phone,email),
+    quote_items(*, products(name))
+  `).order('created_at',{ascending:false});
+  allQuotes = data || [];
+  const pending = allQuotes.filter(q=>q.status==='pending').length;
+  document.getElementById('pending-badge').textContent = pending;
+  document.getElementById('pending-badge').style.display = pending>0?'inline-block':'none';
+  document.getElementById('topbar-badge').textContent = pending>0?` (${pending})`:'';
+  document.getElementById('stat-pending').textContent = pending;
+  const now = new Date();
+  document.getElementById('stat-month').textContent = allQuotes.filter(q=>{
+    const d = new Date(q.created_at);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  }).length;
+}
+
+async function loadProducts(){
+  const { data } = await supa.from('products').select('*').eq('is_active',true).order('category').order('name');
+  allProducts = data || [];
+  document.getElementById('stat-products').textContent = allProducts.length;
+}
+
+async function loadCustomers(){
+  const { data } = await supa.from('customers').select('*, delivery_sites(*)').order('company_name');
+  allCustomers = data || [];
+  document.getElementById('stat-customers').textContent = allCustomers.length;
+}
+
+// ── Dashboard ──
+function renderDashboard(){
+  const pending = allQuotes.filter(q=>q.status==='pending');
+  const sent    = allQuotes.filter(q=>['sent','won'].includes(q.status)).slice(0,5);
+  document.getElementById('dash-pending-list').innerHTML = pending.length
+    ? pending.map(q=>quoteRowHtml(q)).join('')
+    : '<div class="empty"><i class="ti ti-check-circle"></i><p>No pending quotes — all clear!</p></div>';
+  document.getElementById('dash-sent-list').innerHTML = sent.length
+    ? sent.map(q=>quoteRowHtml(q)).join('')
+    : '<div class="empty"><i class="ti ti-file-off"></i><p>No sent quotes yet.</p></div>';
+}
+
+// ── Quote row HTML ──
+function quoteRowHtml(q){
+  const custName = q.customers?.company_name || '—';
+  const total    = calcQuoteTotal(q.quote_items||[]);
+  return `<div class="quote-row" onclick="openQuoteDetail(${q.id})">
+    <div class="qr-ref">${q.quote_ref||'—'}</div>
+    <div class="qr-customer">
+      <div class="qr-name">${custName}</div>
+      <div class="qr-meta">${q.agent_name||''}${q.notes?' · '+q.notes.substring(0,40):''}</div>
+    </div>
+    ${statusBadge(q.status)}
+    <div class="qr-amount">${fmt(total)}</div>
+    <div class="qr-date">${fmtDate(q.created_at)}</div>
+  </div>`;
+}
+
+function calcQuoteTotal(items){
+  return items.reduce((sum,it)=>{
+    const taxable = parseFloat(it.base_price) * parseFloat(it.qty) * (1 - parseFloat(it.disc_pct||0)/100);
+    return sum + taxable * (1 + parseFloat(it.gst_pct)/100);
+  },0);
+}
+
+// ── Quotes section ──
+function renderQuotes(){
+  const filter = document.getElementById('quote-filter').value;
+  const search = (document.getElementById('quote-search').value||'').toLowerCase();
+  const filtered = allQuotes.filter(q=>{
+    const matchF = filter==='all' || q.status===filter;
+    const matchS = !search || (q.quote_ref||'').toLowerCase().includes(search) || (q.customers?.company_name||'').toLowerCase().includes(search);
+    return matchF && matchS;
+  });
+  document.getElementById('quotes-list').innerHTML = filtered.length
+    ? filtered.map(q=>quoteRowHtml(q)).join('')
+    : '<div class="empty"><i class="ti ti-file-off"></i><p>No quotes found.</p></div>';
+}
+
+// ── Quote detail modal ──
+async function openQuoteDetail(id){
+  const q = allQuotes.find(x=>x.id===id);
+  if(!q) return;
+  const cust  = q.customers||{};
+  const items = q.quote_items||[];
+  document.getElementById('modal-title').textContent = `Quote ${q.quote_ref||''}`;
+  document.getElementById('modal-status-badge').className = `badge badge-${q.status}`;
+  document.getElementById('modal-status-badge').textContent = q.status;
+
+  let subBase=0,subDisc=0,subGst=0;
+  const itemRows = items.map((it,i)=>{
+    const base    = parseFloat(it.base_price)*parseFloat(it.qty);
+    const discAmt = base * parseFloat(it.disc_pct||0)/100;
+    const taxable = base - discAmt;
+    const gstAmt  = taxable * parseFloat(it.gst_pct)/100;
+    const total   = taxable + gstAmt;
+    subBase+=base; subDisc+=discAmt; subGst+=gstAmt;
+    return `<div class="li-row">
+      <div><div class="li-name">${it.product_name}</div><div class="li-sub">${it.unit||''} · GST ${it.gst_pct}% · HSN ${it.hsn_code||'—'}</div></div>
+      <div style="text-align:right;">${parseFloat(it.qty)}</div>
+      <div style="text-align:right;">${fmt(parseFloat(it.base_price))}</div>
+      <input class="li-input" type="number" min="0" max="100" step="0.5" value="${parseFloat(it.disc_pct||0)}" 
+        oninput="updateLineDisc(${i},this.value)" data-item-idx="${i}"/>
+      <div class="li-total" id="li-total-${i}">${fmt(total)}</div>
+      <div></div>
+    </div>`;
+  }).join('');
+
+  const grand = subBase - subDisc + subGst;
+
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <div class="sec-head">Customer</div>
+        <div style="font-size:14px;font-weight:700;">${cust.company_name||'—'}</div>
+        ${cust.phone?`<div style="font-size:13px;color:var(--muted);">${cust.phone}</div>`:''}
+        ${cust.email?`<div style="font-size:13px;color:var(--muted);">${cust.email}</div>`:''}
+      </div>
+      <div>
+        <div class="sec-head">Quote info</div>
+        <div style="font-size:13px;">Ref: <strong>${q.quote_ref||'—'}</strong></div>
+        <div style="font-size:13px;">Agent: <strong>${q.agent_name||'—'}</strong></div>
+        <div style="font-size:13px;">Date: <strong>${fmtDate(q.created_at)}</strong></div>
+        ${q.notes?`<div style="font-size:13px;color:var(--muted);margin-top:4px;">Notes: ${q.notes}</div>`:''}
+      </div>
+    </div>
+    <div class="sec-head">Line items — edit discounts below</div>
+    <div class="li-row" style="border-bottom:1px solid var(--border);padding-bottom:6px;">
+      <span class="li-head">Product</span>
+      <span class="li-head" style="text-align:right;">Qty</span>
+      <span class="li-head" style="text-align:right;">Base/unit</span>
+      <span class="li-head" style="text-align:right;">Disc %</span>
+      <span class="li-head" style="text-align:right;">Line total</span>
+      <span></span>
+    </div>
+    ${itemRows}
+    <div class="total-bar" id="modal-total-bar">
+      <div class="tb-row"><span>Subtotal (excl. GST)</span><span>${fmt(subBase)}</span></div>
+      ${subDisc>0?`<div class="tb-row"><span>Discount</span><span>− ${fmt(subDisc)}</span></div>`:''}
+      <div class="tb-row"><span>Total GST</span><span>${fmt(subGst)}</span></div>
+      <div class="tb-grand"><span class="lbl">Grand Total</span><span class="amt">${fmt(grand)}</span></div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label class="form-label">HQ notes / terms</label>
+      <textarea class="form-control" id="modal-hq-notes" placeholder="Payment terms, delivery, validity…">${q.hq_notes||''}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Update status</label>
+      <select class="form-control" id="modal-status-sel">
+        <option value="pending"  ${q.status==='pending' ?'selected':''}>Pending</option>
+        <option value="approved" ${q.status==='approved'?'selected':''}>Approved</option>
+        <option value="sent"     ${q.status==='sent'    ?'selected':''}>Sent</option>
+        <option value="won"      ${q.status==='won'     ?'selected':''}>Won</option>
+        <option value="lost"     ${q.status==='lost'    ?'selected':''}>Lost</option>
+      </select>
+    </div>`;
+
+  // Store current quote items for editing
+  window._modalQuote = JSON.parse(JSON.stringify(q));
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-navy" onclick="saveQuoteChanges(${id})"><i class="ti ti-device-floppy"></i> Save changes</button>
+    <button class="btn-wa" onclick="sendQuoteWhatsApp(${id})">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+      Send to client via WhatsApp
+    </button>
+    <button class="btn btn-ghost" onclick="closeModal('quote-modal')">Close</button>`;
+
+  openModal('quote-modal');
+}
+
+function updateLineDisc(idx, val){
+  const q = window._modalQuote;
+  if(!q) return;
+  const items = q.quote_items||[];
+  const it = items[idx];
+  if(!it) return;
+  const disc = Math.max(0,Math.min(100,parseFloat(val)||0));
+  it.disc_pct = disc;
+  const base    = parseFloat(it.base_price)*parseFloat(it.qty);
+  const discAmt = base * disc/100;
+  const taxable = base - discAmt;
+  const gstAmt  = taxable * parseFloat(it.gst_pct)/100;
+  document.getElementById(`li-total-${idx}`).textContent = fmt(taxable+gstAmt);
+  // Update total bar
+  let subBase=0,subDisc=0,subGst=0;
+  items.forEach(i=>{
+    const b=parseFloat(i.base_price)*parseFloat(i.qty);
+    const d=b*parseFloat(i.disc_pct||0)/100;
+    subBase+=b; subDisc+=d;
+    subGst+=(b-d)*parseFloat(i.gst_pct)/100;
+  });
+  const grand=subBase-subDisc+subGst;
+  document.getElementById('modal-total-bar').innerHTML = `
+    <div class="tb-row"><span>Subtotal (excl. GST)</span><span>${fmt(subBase)}</span></div>
+    ${subDisc>0?`<div class="tb-row"><span>Discount</span><span>− ${fmt(subDisc)}</span></div>`:''}
+    <div class="tb-row"><span>Total GST</span><span>${fmt(subGst)}</span></div>
+    <div class="tb-grand"><span class="lbl">Grand Total</span><span class="amt">${fmt(grand)}</span></div>`;
+}
+
+async function saveQuoteChanges(id){
+  const q = window._modalQuote;
+  if(!q) return;
+  const status   = document.getElementById('modal-status-sel').value;
+  const hqNotes  = document.getElementById('modal-hq-notes').value.trim();
+  toast('Saving...');
+  try {
+    await supa.from('quotes').update({ status, hq_notes: hqNotes, updated_at: new Date().toISOString() }).eq('id',id);
+    // Update each line item discount
+    for(const it of (q.quote_items||[])){
+      await supa.from('quote_items').update({ disc_pct: it.disc_pct||0 }).eq('id',it.id);
+    }
+    await loadQuotes();
+    const updated = allQuotes.find(x=>x.id===id);
+    if(updated) window._modalQuote = JSON.parse(JSON.stringify(updated));
+    document.getElementById('modal-status-badge').className = `badge badge-${status}`;
+    document.getElementById('modal-status-badge').textContent = status;
+    renderDashboard();
+    toast('Quote saved ✓');
+  } catch(e){ toast('Error saving — check connection'); console.error(e); }
+}
+
+function sendQuoteWhatsApp(id){
+  const q = allQuotes.find(x=>x.id===id);
+  if(!q) return;
+  const cust  = q.customers||{};
+  const items = q.quote_items||[];
+  const phone = (cust.phone||'').replace(/\D/g,'');
+  const hqNotes = document.getElementById('modal-hq-notes')?.value || q.hq_notes || '';
+  const today = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+  let subBase=0,subDisc=0,subGst=0;
+  const lines = items.map(it=>{
+    const base    = parseFloat(it.base_price)*parseFloat(it.qty);
+    const discAmt = base*parseFloat(it.disc_pct||0)/100;
+    const taxable = base-discAmt;
+    const gstAmt  = taxable*parseFloat(it.gst_pct)/100;
+    subBase+=base; subDisc+=discAmt; subGst+=gstAmt;
+    return `  • *${it.product_name}*${it.unit?' ('+it.unit+')':''} × ${it.qty}\n    Base: ${fmt(it.base_price)}/unit${it.disc_pct>0?' − Disc '+it.disc_pct+'%':''} + GST ${it.gst_pct}%\n    Line Total: *${fmt(taxable+gstAmt)}*`;
+  }).join('\n\n');
+
+  const grand = subBase-subDisc+subGst;
+  const msg = `Dear ${cust.company_name||'Customer'},\n\nPlease find our quotation below:\nRef: ${q.quote_ref} | Date: ${today}\n\n*Items:*\n${lines}\n\n──────────────\nTaxable Value: ${fmt(subBase-subDisc)}\nGST: ${fmt(subGst)}\n*Grand Total: ${fmt(grand)}*\n──────────────\n${hqNotes?'Terms: '+hqNotes+'\n':''}Validity: ${q.validity_days||15} days\n\nThank you for your enquiry.\n\n*${COMPANY}*\n${COMPANY_ADDR}\nGSTIN: ${COMPANY_GSTIN}`;
+
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  window.open(url,'_blank');
+  // Mark as sent
+  supa.from('quotes').update({ status:'sent', sent_at: new Date().toISOString() }).eq('id',id).then(()=>{
+    loadQuotes(); renderDashboard(); toast('Quote sent to client ✓');
+  });
+}
+
+// ── Products ──
+function renderProducts(){
+  const q = (document.getElementById('prod-search').value||'').toLowerCase();
+  const filtered = allProducts.filter(p=>!q||p.name.toLowerCase().includes(q)||(p.category||'').toLowerCase().includes(q));
+  document.getElementById('prod-tbody').innerHTML = filtered.length
+    ? filtered.map(p=>{
+        const total = parseFloat(p.base_price)*(1+parseFloat(p.gst_pct)/100);
+        const thumb = p.photo_url
+          ? `<img src="${p.photo_url}" style="width:36px;height:36px;border-radius:6px;object-fit:cover;"/>`
+          : `<div style="width:36px;height:36px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;">${p.emoji||'📦'}</div>`;
+        return `<tr>
+          <td><div style="display:flex;align-items:center;gap:10px;">${thumb}<div><div style="font-weight:600;">${p.name}</div><div style="font-size:11px;color:var(--muted);">${p.description||''}</div></div></div></td>
+          <td>${p.category||'—'}</td>
+          <td>${fmt(p.base_price)}</td>
+          <td>${p.gst_pct}%</td>
+          <td style="font-weight:700;color:var(--saffron);">${fmt(total)}</td>
+          <td>${p.hsn_code||'—'}</td>
+          <td><div class="actions">
+            <button class="btn btn-ghost btn-sm" onclick="openProductModal(${p.id})"><i class="ti ti-edit"></i></button>
+          </div></td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="7"><div class="empty"><i class="ti ti-package-off"></i><p>No products found.</p></div></td></tr>`;
+}
+
+function openProductModal(id){
+  editProdId = id||null;
+  document.getElementById('prod-modal-title').textContent = id ? 'Edit product' : 'Add product';
+  document.getElementById('pm-delete-btn').style.display = id ? 'inline-flex' : 'none';
+  if(id){
+    const p = allProducts.find(x=>x.id===id);
+    document.getElementById('pm-name').value  = p.name||'';
+    document.getElementById('pm-cat').value   = p.category||'';
+    document.getElementById('pm-desc').value  = p.description||'';
+    document.getElementById('pm-price').value = p.base_price||'';
+    document.getElementById('pm-gst').value   = p.gst_pct||18;
+    document.getElementById('pm-hsn').value   = p.hsn_code||'';
+    document.getElementById('pm-unit').value  = p.unit||'';
+    updateProdPreview();
+  } else {
+    ['pm-name','pm-cat','pm-desc','pm-price','pm-hsn','pm-unit'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('pm-gst').value='18';
+    document.getElementById('pm-total').textContent='₹0.00';
+  }
+  openModal('product-modal');
+}
+
+function updateProdPreview(){
+  const base = parseFloat(document.getElementById('pm-price').value)||0;
+  const gst  = parseFloat(document.getElementById('pm-gst').value)||0;
+  document.getElementById('pm-total').textContent = fmt(base*(1+gst/100));
+}
+
+async function saveProductModal(){
+  const name = document.getElementById('pm-name').value.trim();
+  if(!name){ toast('Please enter a product name'); return; }
+  const row = {
+    name, category: document.getElementById('pm-cat').value.trim(),
+    description: document.getElementById('pm-desc').value.trim(),
+    base_price: parseFloat(document.getElementById('pm-price').value)||0,
+    gst_pct: parseFloat(document.getElementById('pm-gst').value)||18,
+    hsn_code: document.getElementById('pm-hsn').value.trim(),
+    unit: document.getElementById('pm-unit').value.trim(),
+    is_active: true, updated_at: new Date().toISOString(),
+  };
+  try {
+    toast('Saving...');
+    if(editProdId){
+      await supa.from('products').update(row).eq('id',editProdId);
+    } else {
+      await supa.from('products').insert(row);
+    }
+    await loadProducts();
+    renderProducts();
+    closeModal('product-modal');
+    toast(editProdId?'Product updated ✓':'Product added ✓');
+  } catch(e){ toast('Error saving product'); console.error(e); }
+}
+
+async function deleteProductModal(){
+  if(!editProdId||!confirm('Delete this product?')) return;
+  await supa.from('products').update({is_active:false}).eq('id',editProdId);
+  await loadProducts(); renderProducts();
+  closeModal('product-modal');
+  toast('Product deleted');
+}
+
+// ── Customers ──
+function renderCustomers(){
+  const q = (document.getElementById('cust-search').value||'').toLowerCase();
+  const filtered = allCustomers.filter(c=>!q||(c.company_name||'').toLowerCase().includes(q)||(c.billing_city||'').toLowerCase().includes(q));
+  document.getElementById('cust-tbody').innerHTML = filtered.length
+    ? filtered.map(c=>`<tr>
+        <td><div style="font-weight:600;">${c.company_name}</div>${c.billing_address?`<div style="font-size:11px;color:var(--muted);">${c.billing_address}</div>`:''}</td>
+        <td>${c.contact_person||'—'}</td>
+        <td>${c.phone||'—'}</td>
+        <td style="font-size:12px;">${c.gstin||'—'}</td>
+        <td>${c.billing_city||'—'}</td>
+        <td><div class="actions">
+          <button class="btn btn-ghost btn-sm" onclick="openCustomerModal(${c.id})"><i class="ti ti-edit"></i></button>
+        </div></td>
+      </tr>`).join('')
+    : `<tr><td colspan="6"><div class="empty"><i class="ti ti-users-off"></i><p>No customers found.</p></div></td></tr>`;
+}
+
+function openCustomerModal(id){
+  editCustId = id||null;
+  activeSites = [];
+  document.getElementById('cust-modal-title').textContent = id ? 'Edit customer' : 'Add customer';
+  if(id){
+    const c = allCustomers.find(x=>x.id===id);
+    document.getElementById('cm-company').value  = c.company_name||'';
+    document.getElementById('cm-contact').value  = c.contact_person||'';
+    document.getElementById('cm-phone').value    = c.phone||'';
+    document.getElementById('cm-email').value    = c.email||'';
+    document.getElementById('cm-gstin').value    = c.gstin||'';
+    document.getElementById('cm-billing').value  = c.billing_address||'';
+    document.getElementById('cm-city').value     = c.billing_city||'';
+    document.getElementById('cm-pin').value      = c.billing_pincode||'';
+    activeSites = (c.delivery_sites||[]).map(s=>({...s}));
+  } else {
+    ['cm-company','cm-contact','cm-phone','cm-email','cm-gstin','cm-billing','cm-city','cm-pin'].forEach(i=>document.getElementById(i).value='');
+  }
+  renderSiteFields();
+  openModal('customer-modal');
+}
+
+function renderSiteFields(){
+  document.getElementById('cm-sites-list').innerHTML = activeSites.map((s,i)=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input class="form-control" value="${s.site_name||''}" placeholder="Site name (e.g. Kakkanad site)"
+        oninput="activeSites[${i}].site_name=this.value" style="flex:1;"/>
+      <input class="form-control" value="${s.address||''}" placeholder="Address"
+        oninput="activeSites[${i}].address=this.value" style="flex:1;"/>
+      <button class="btn btn-ghost btn-sm" onclick="activeSites.splice(${i},1);renderSiteFields()"><i class="ti ti-x"></i></button>
+    </div>`).join('');
+}
+
+function addSiteField(){
+  activeSites.push({site_name:'',address:''});
+  renderSiteFields();
+}
+
+async function saveCustomerModal(){
+  const company = document.getElementById('cm-company').value.trim();
+  if(!company){ toast('Please enter company name'); return; }
+  const row = {
+    company_name: company,
+    contact_person: document.getElementById('cm-contact').value.trim(),
+    phone: document.getElementById('cm-phone').value.trim(),
+    email: document.getElementById('cm-email').value.trim(),
+    gstin: document.getElementById('cm-gstin').value.trim().toUpperCase(),
+    billing_address: document.getElementById('cm-billing').value.trim(),
+    billing_city: document.getElementById('cm-city').value.trim(),
+    billing_pincode: document.getElementById('cm-pin').value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    toast('Saving...');
+    let custId = editCustId;
+    if(editCustId){
+      await supa.from('customers').update(row).eq('id',editCustId);
+    } else {
+      const { data } = await supa.from('customers').insert(row).select('id').single();
+      custId = data.id;
+    }
+    // Save delivery sites
+    for(const site of activeSites){
+      if(!site.site_name.trim()) continue;
+      if(site.id){
+        await supa.from('delivery_sites').update({site_name:site.site_name,address:site.address}).eq('id',site.id);
+      } else {
+        await supa.from('delivery_sites').insert({customer_id:custId,site_name:site.site_name,address:site.address});
+      }
+    }
+    await loadCustomers(); renderCustomers();
+    closeModal('customer-modal');
+    toast(editCustId?'Customer updated ✓':'Customer added ✓');
+  } catch(e){ toast('Error saving customer'); console.error(e); }
+}
+
+// ── Reports ──
+function renderReports(){
+  // Status breakdown
+  const statusCounts = {};
+  allQuotes.forEach(q=>{ statusCounts[q.status]=(statusCounts[q.status]||0)+1; });
+  document.getElementById('report-status').innerHTML = Object.entries(statusCounts).map(([s,c])=>`
+    <div class="status-row">
+      ${statusBadge(s)}
+      <span style="font-size:14px;font-weight:700;">${c} quote${c!==1?'s':''}</span>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:13px;">No data yet</p>';
+
+  // Top products
+  const prodCounts = {};
+  allQuotes.forEach(q=>(q.quote_items||[]).forEach(it=>{
+    prodCounts[it.product_name]=(prodCounts[it.product_name]||0)+parseFloat(it.qty);
+  }));
+  const topProds = Object.entries(prodCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxProd = topProds[0]?.[1]||1;
+  document.getElementById('report-products').innerHTML = topProds.map(([name,qty])=>`
+    <div class="bar-row">
+      <span class="bar-label">${name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${qty/maxProd*100}%"></div></div>
+      <span class="bar-val">${qty} units</span>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:13px;">No data yet</p>';
+
+  // Top customers by value
+  const custValues = {};
+  allQuotes.forEach(q=>{
+    const name = q.customers?.company_name||'Unknown';
+    custValues[name]=(custValues[name]||0)+calcQuoteTotal(q.quote_items||[]);
+  });
+  const topCusts = Object.entries(custValues).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCust = topCusts[0]?.[1]||1;
+  document.getElementById('report-customers').innerHTML = topCusts.map(([name,val])=>`
+    <div class="bar-row">
+      <span class="bar-label">${name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${val/maxCust*100}%;background:var(--navy);"></div></div>
+      <span class="bar-val">${fmt(val)}</span>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:13px;">No data yet</p>';
+
+  // Monthly activity
+  const monthly = {};
+  allQuotes.forEach(q=>{
+    const d = new Date(q.created_at);
+    const key = d.toLocaleDateString('en-IN',{month:'short',year:'numeric'});
+    monthly[key]=(monthly[key]||0)+1;
+  });
+  const months = Object.entries(monthly).slice(-6);
+  const maxM = Math.max(...months.map(m=>m[1]),1);
+  document.getElementById('report-monthly').innerHTML = months.map(([m,c])=>`
+    <div class="bar-row">
+      <span class="bar-label">${m}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:${c/maxM*100}%;background:var(--green);"></div></div>
+      <span class="bar-val">${c} quotes</span>
+    </div>`).join('') || '<p style="color:var(--muted);font-size:13px;">No data yet</p>';
+}
+
+// ── Boot ──
+async function boot(){
+  toast('Loading dashboard...');
+  await loadAll();
+  if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+boot();
+</script>
+</body>
+</html>
