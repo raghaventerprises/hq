@@ -403,7 +403,8 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
-          <input class="form-control" type="text" id="pm-cat" placeholder="Pumps, Valves…"/>
+          <input class="form-control" type="text" id="pm-cat" placeholder="Select or type new category…" list="hq-cat-datalist" autocomplete="off"/>
+          <datalist id="hq-cat-datalist"></datalist>
         </div>
       </div>
       <div class="form-group">
@@ -841,10 +842,18 @@ function renderProducts(){
     : `<tr><td colspan="7"><div class="empty"><i class="ti ti-package-off"></i><p>No products found.</p></div></td></tr>`;
 }
 
+function populateHQCatDatalist() {
+  const dl = document.getElementById('hq-cat-datalist');
+  if (!dl) return;
+  const cats = [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort();
+  dl.innerHTML = cats.map(c => `<option value="${c}">`).join('');
+}
+
 function openProductModal(id){
   editProdId = id||null;
   document.getElementById('prod-modal-title').textContent = id ? 'Edit product' : 'Add product';
   document.getElementById('pm-delete-btn').style.display = id ? 'inline-flex' : 'none';
+  populateHQCatDatalist();
   if(id){
     const p = allProducts.find(x=>x.id===id);
     document.getElementById('pm-name').value  = p.name||'';
