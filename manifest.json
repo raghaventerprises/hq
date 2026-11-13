@@ -1,7 +1,7 @@
 {
-  "name": "SUDARSHAN – Raghav Enterprises",
+  "name": "SUDARSHAN",
   "short_name": "SUDARSHAN",
-  "description": "HQ dashboard for Raghav Enterprises",
+  "description": "HQ dashboard",
   "start_url": "./index.html",
   "display": "standalone",
   "orientation": "any",
