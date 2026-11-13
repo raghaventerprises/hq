@@ -112,6 +112,10 @@ img{display:block;}
 .badge-won{background:var(--green-lt);color:var(--green);}
 .badge-lost{background:var(--red-lt);color:var(--red);}
 .badge-draft{background:var(--surface2);color:var(--muted);}
+.badge-invoiced{background:var(--green-lt);color:var(--green);}
+.badge-cancelled{background:var(--red-lt);color:var(--red);}
+.badge-cash{background:var(--green-lt);color:var(--green);}
+.badge-credit{background:var(--amber-lt);color:var(--amber);}
 
 /* ── Buttons ── */
 .btn{border:none;border-radius:var(--rad-sm);padding:9px 16px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;}
@@ -213,6 +217,10 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
       <i class="ti ti-file-invoice"></i>Quotes
       <span class="nav-badge" id="pending-badge" style="display:none;">0</span>
     </button>
+    <button class="nav-item" onclick="showSection('storeorders')">
+      <i class="ti ti-building-store"></i>Store Orders
+      <span class="nav-badge" id="store-badge" style="display:none;">0</span>
+    </button>
     <button class="nav-item" onclick="showSection('products')"><i class="ti ti-package"></i>Products</button>
     <button class="nav-item" onclick="showSection('customers')"><i class="ti ti-users"></i>Customers</button>
     <button class="nav-item" onclick="showSection('reports')"><i class="ti ti-chart-bar"></i>Reports</button>
@@ -247,6 +255,11 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <div class="value" id="stat-pending">—</div>
         <div class="sub">Awaiting HQ action</div>
       </div>
+      <div class="stat-card accent">
+        <div class="label">Pending Store Orders</div>
+        <div class="value" id="stat-store-pending">—</div>
+        <div class="sub">Awaiting invoicing</div>
+      </div>
       <div class="stat-card">
         <div class="label">Quotes This Month</div>
         <div class="value" id="stat-month">—</div>
@@ -271,6 +284,15 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
         <h3>Pending Quotes — Needs Action</h3>
       </div>
       <div id="dash-pending-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
+    </div>
+
+    <!-- Pending store orders -->
+    <div class="card">
+      <div class="card-head">
+        <i class="ti ti-building-store" style="color:var(--saffron);font-size:18px;"></i>
+        <h3>Store Orders — Needs Invoicing</h3>
+      </div>
+      <div id="dash-store-list"><div class="empty"><i class="ti ti-loader"></i><p>Loading...</p></div></div>
     </div>
 
     <!-- Recent sent quotes -->
@@ -298,6 +320,26 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
     </div>
     <div class="card">
       <div id="quotes-list"></div>
+    </div>
+  </div>
+
+  <!-- ── SECTION: STORE ORDERS ── -->
+  <div class="content" id="sec-storeorders" style="display:none;">
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <select class="form-control" id="so-filter" onchange="renderStoreOrders()" style="max-width:160px;">
+        <option value="all">All orders</option>
+        <option value="pending" selected>Pending</option>
+        <option value="approved">Approved</option>
+        <option value="invoiced">Invoiced</option>
+        <option value="cancelled">Cancelled</option>
+      </select>
+      <select class="form-control" id="so-staff" onchange="renderStoreOrders()" style="max-width:150px;">
+        <option value="all">All staff</option>
+      </select>
+      <input class="form-control" type="search" id="so-search" placeholder="Search customer or ref..." oninput="renderStoreOrders()" style="flex:1;min-width:180px;"/>
+    </div>
+    <div class="card">
+      <div id="so-list"></div>
     </div>
   </div>
 
@@ -369,6 +411,7 @@ select.form-control{appearance:none;background-image:url("data:image/svg+xml,%3C
   <div class="mobile-nav">
     <button class="mnav-btn active" onclick="showSection('dashboard')"><i class="ti ti-layout-dashboard"></i>Home</button>
     <button class="mnav-btn" onclick="showSection('quotes')"><i class="ti ti-file-invoice"></i>Quotes</button>
+    <button class="mnav-btn" onclick="showSection('storeorders')"><i class="ti ti-building-store"></i>Orders</button>
     <button class="mnav-btn" onclick="showSection('products')"><i class="ti ti-package"></i>Products</button>
     <button class="mnav-btn" onclick="showSection('customers')"><i class="ti ti-users"></i>Customers</button>
     <button class="mnav-btn" onclick="showSection('reports')"><i class="ti ti-chart-bar"></i>Reports</button>
@@ -521,6 +564,7 @@ const HQ_PHONE     = '919495935258';
 
 // ── State ──
 let allQuotes    = [];
+let allStoreOrders = [];
 let allProducts  = [];
 let allCustomers = [];
 let editProdId   = null;
@@ -541,27 +585,30 @@ function fmtDate(d){ return d ? new Date(d).toLocaleDateString('en-IN',{day:'2-d
 
 // ── Navigation ──
 function showSection(id){
-  ['dashboard','quotes','products','customers','reports'].forEach(s=>{
+  ['dashboard','quotes','storeorders','products','customers','reports'].forEach(s=>{
     document.getElementById('sec-'+s).style.display = s===id ? 'block' : 'none';
   });
+  const navKey  = {dashboard:'dash', storeorders:'store', quotes:'quotes', products:'products', customers:'customers', reports:'reports'};
+  const mnavKey = {dashboard:'home', storeorders:'orders', quotes:'quotes', products:'products', customers:'customers', reports:'reports'};
   document.querySelectorAll('.nav-item').forEach(b=>{
-    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(id==='dashboard'?'dash':id));
+    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(navKey[id]));
   });
   document.querySelectorAll('.mnav-btn').forEach(b=>{
-    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(id==='dashboard'?'home':id));
+    b.classList.toggle('active', b.textContent.trim().toLowerCase().startsWith(mnavKey[id]));
   });
-  const titles = {dashboard:'Dashboard',quotes:'Quotes',products:'Products',customers:'Customers',reports:'Reports'};
+  const titles = {dashboard:'Dashboard',quotes:'Quotes',storeorders:'Store Orders',products:'Products',customers:'Customers',reports:'Reports'};
   document.getElementById('section-title').textContent = titles[id];
-  if(id==='quotes')    renderQuotes();
-  if(id==='products')  renderProducts();
-  if(id==='customers') renderCustomers();
-  if(id==='reports')   renderReports();
+  if(id==='quotes')      renderQuotes();
+  if(id==='storeorders') renderStoreOrders();
+  if(id==='products')    renderProducts();
+  if(id==='customers')   renderCustomers();
+  if(id==='reports')     renderReports();
 }
 
 // ── Load all data ──
 async function loadAll(){
   toast('Refreshing...');
-  await Promise.all([loadQuotes(), loadProducts(), loadCustomers()]);
+  await Promise.all([loadQuotes(), loadStoreOrders(), loadProducts(), loadCustomers()]);
   renderDashboard();
   toast('Data refreshed');
 }
@@ -582,6 +629,201 @@ async function loadQuotes(){
     const d = new Date(q.created_at);
     return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
   }).length;
+}
+
+async function loadStoreOrders(){
+  const { data, error } = await supa.from('store_orders').select(`
+    *, customers(company_name,contact_person,phone,gstin),
+    store_items(*)
+  `).order('created_at',{ascending:false});
+  if(error){ console.error('store_orders load failed',error); allStoreOrders=[]; return; }
+  allStoreOrders = data || [];
+  const pending = allStoreOrders.filter(o=>o.status==='pending').length;
+  const badge = document.getElementById('store-badge');
+  badge.textContent = pending;
+  badge.style.display = pending>0 ? 'inline-block' : 'none';
+  const sp = document.getElementById('stat-store-pending');
+  if(sp) sp.textContent = pending;
+  // Populate staff filter
+  const sel = document.getElementById('so-staff');
+  if(sel){
+    const cur = sel.value;
+    const staff = [...new Set(allStoreOrders.map(o=>o.staff_name).filter(Boolean))].sort();
+    sel.innerHTML = '<option value="all">All staff</option>' +
+      staff.map(n=>`<option value="${n}">${n.charAt(0).toUpperCase()+n.slice(1)}</option>`).join('');
+    if([...sel.options].some(o=>o.value===cur)) sel.value = cur;
+  }
+}
+
+// Goods total only — delivery is informational and never billed
+function soGoodsTotal(o){
+  if(o.grand_total!=null) return parseFloat(o.grand_total);
+  return (o.store_items||[]).reduce((sum,it)=>{
+    const taxable = parseFloat(it.base_price||0)*parseFloat(it.qty||0)*(1-parseFloat(it.discount_pct||0)/100);
+    return sum + taxable*(1+parseFloat(it.gst_pct||18)/100);
+  },0);
+}
+
+function storeOrderRowHtml(o){
+  const cust = o.customers?.company_name || '—';
+  const staff = o.staff_name ? o.staff_name.charAt(0).toUpperCase()+o.staff_name.slice(1) : '';
+  const n = (o.store_items||[]).length;
+  const dc = parseFloat(o.delivery_cost||0);
+  const meta = [staff, `${n} item${n===1?'':'s'}`,
+    o.delivery_mode==='deliver'?'Delivery':'Collect',
+    (o.payment_type||'cash').toUpperCase()].filter(Boolean).join(' · ');
+  return `<div class="quote-row" onclick="openStoreOrderDetail(${o.id})">
+    <div class="qr-ref">${o.order_ref||'—'}</div>
+    <div class="qr-customer">
+      <div class="qr-name">${cust}</div>
+      <div class="qr-meta">${meta}${dc>0?` · <span style="color:var(--muted);">freight ${fmt(dc)}</span>`:''}</div>
+    </div>
+    ${statusBadge(o.status)}
+    <div class="qr-amount">${fmt(soGoodsTotal(o))}</div>
+    <div class="qr-date">${fmtDate(o.created_at)}</div>
+  </div>`;
+}
+
+function renderStoreOrders(){
+  const f  = document.getElementById('so-filter').value;
+  const st = document.getElementById('so-staff').value;
+  const q  = (document.getElementById('so-search').value||'').toLowerCase();
+  const rows = allStoreOrders.filter(o=>{
+    const mf = f==='all'  || o.status===f;
+    const ms = st==='all' || o.staff_name===st;
+    const mq = !q || (o.order_ref||'').toLowerCase().includes(q)
+                  || (o.customers?.company_name||'').toLowerCase().includes(q);
+    return mf && ms && mq;
+  });
+  document.getElementById('so-list').innerHTML = rows.length
+    ? rows.map(storeOrderRowHtml).join('')
+    : '<div class="empty"><i class="ti ti-building-store"></i><p>No store orders found.</p></div>';
+}
+
+// ── Store order detail modal ──
+function openStoreOrderDetail(id){
+  const o = allStoreOrders.find(x=>x.id===id);
+  if(!o) return;
+  window._modalStoreOrder = o;
+  const c = o.customers||{};
+  const items = o.store_items||[];
+  document.getElementById('modal-title').textContent = `Store Order ${o.order_ref||''}`;
+  document.getElementById('modal-status-badge').className = `badge badge-${o.status}`;
+  document.getElementById('modal-status-badge').textContent = o.status;
+
+  let subBase=0, subGst=0;
+  const itemRows = items.map(it=>{
+    const base    = parseFloat(it.base_price||0)*parseFloat(it.qty||0);
+    const taxable = base*(1-parseFloat(it.discount_pct||0)/100);
+    const gstAmt  = taxable*parseFloat(it.gst_pct||18)/100;
+    subBase+=taxable; subGst+=gstAmt;
+    return `<div class="li-row">
+      <div><div class="li-name">${it.product_name||'—'}</div>
+      <div class="li-sub">${it.unit||''}${it.hsn_code?' · HSN '+it.hsn_code:''} · GST ${it.gst_pct||18}%</div></div>
+      <div style="text-align:right;">${parseFloat(it.qty||0)}</div>
+      <div style="text-align:right;">${fmt(it.base_price)}</div>
+      <div style="text-align:right;">${parseFloat(it.discount_pct||0)}%</div>
+      <div class="li-total">${fmt(taxable+gstAmt)}</div>
+      <div></div>
+    </div>`;
+  }).join('');
+
+  const dc = parseFloat(o.delivery_cost||0);
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div>
+        <div class="sec-head">Customer</div>
+        <div style="font-size:14px;font-weight:700;">${c.company_name||'—'}</div>
+        ${c.contact_person?`<div style="font-size:13px;color:var(--muted);">${c.contact_person}</div>`:''}
+        ${c.phone?`<div style="font-size:13px;color:var(--muted);">${c.phone}</div>`:''}
+        ${c.gstin?`<div style="font-size:11px;color:var(--muted);margin-top:3px;">GSTIN: ${c.gstin}</div>`:''}
+      </div>
+      <div>
+        <div class="sec-head">Order</div>
+        <div style="font-size:13px;">Taken by <strong>${o.staff_name||'—'}</strong></div>
+        <div style="font-size:13px;">Payment <span class="badge badge-${o.payment_type||'cash'}">${(o.payment_type||'cash').toUpperCase()}</span></div>
+        <div style="font-size:13px;">${fmtDate(o.created_at)}</div>
+      </div>
+    </div>
+    <div class="sec-head">Fulfilment</div>
+    <div style="background:var(--surface2);border-radius:var(--rad-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;">
+      <strong>${o.delivery_mode==='deliver'?'Delivery to site':'Collect from store'}</strong>
+      ${o.delivery_address?`<div style="color:var(--muted);margin-top:4px;">${o.delivery_address}</div>`:
+        (o.delivery_mode==='deliver'?`<div style="color:var(--red);margin-top:4px;">⚠ No delivery address recorded</div>`:'')}
+      ${o.logistics_partner?`<div style="color:var(--muted);margin-top:2px;">via ${o.logistics_partner}</div>`:''}
+      ${dc>0?`<div style="color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);">Freight cost <strong>${fmt(dc)}</strong> — informational only, not billed and not exported to Miracle.</div>`:''}
+    </div>
+    ${o.notes?`<div style="background:var(--amber-lt);border-radius:var(--rad-sm);padding:10px 13px;margin-bottom:16px;font-size:13px;color:var(--amber);">${o.notes}</div>`:''}
+    <div class="sec-head">Items</div>
+    <div class="li-row" style="border-bottom:1px solid var(--border);padding-bottom:6px;">
+      <span class="li-head">Product</span>
+      <span class="li-head" style="text-align:right;">Qty</span>
+      <span class="li-head" style="text-align:right;">Base/unit</span>
+      <span class="li-head" style="text-align:right;">Disc %</span>
+      <span class="li-head" style="text-align:right;">Total</span>
+      <span></span>
+    </div>
+    ${itemRows || '<div class="empty"><p>No items on this order.</p></div>'}
+    <div class="total-bar">
+      <div class="tb-row"><span>Subtotal (excl. GST)</span><span>${fmt(subBase)}</span></div>
+      <div class="tb-row"><span>Total GST</span><span>${fmt(subGst)}</span></div>
+      <div class="tb-grand"><span class="lbl">Invoice Total</span><span class="amt">${fmt(subBase+subGst)}</span></div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+      <label class="form-label">Update status</label>
+      <select class="form-control" id="so-status-sel">
+        <option value="pending"   ${o.status==='pending'  ?'selected':''}>Pending</option>
+        <option value="approved"  ${o.status==='approved' ?'selected':''}>Approved</option>
+        <option value="invoiced"  ${o.status==='invoiced' ?'selected':''}>Invoiced</option>
+        <option value="cancelled" ${o.status==='cancelled'?'selected':''}>Cancelled</option>
+      </select>
+    </div>`;
+
+  document.getElementById('modal-footer').innerHTML = `
+    <button class="btn btn-navy" onclick="saveStoreOrderStatus(${id})"><i class="ti ti-device-floppy"></i> Save status</button>
+    <button class="btn btn-primary" onclick="exportStoreOrderToExcel(${id})"><i class="ti ti-download"></i> Export to Excel</button>
+    <button class="btn btn-ghost" onclick="closeModal('quote-modal')">Close</button>`;
+  openModal('quote-modal');
+}
+
+async function saveStoreOrderStatus(id){
+  const status = document.getElementById('so-status-sel').value;
+  toast('Saving...');
+  const { error } = await supa.from('store_orders')
+    .update({ status, updated_at: new Date().toISOString() }).eq('id',id);
+  if(error){ toast('Error saving status'); console.error(error); return; }
+  await loadStoreOrders();
+  renderStoreOrders();
+  renderDashboard();
+  document.getElementById('modal-status-badge').className = `badge badge-${status}`;
+  document.getElementById('modal-status-badge').textContent = status;
+  toast('Store order updated ✓');
+}
+
+function exportStoreOrderToExcel(id){
+  const o = window._modalStoreOrder;
+  if(!o){ toast('Order not loaded'); return; }
+  const items = o.store_items||[];
+  if(!items.length){ toast('No items to export'); return; }
+  const rows = items.map(it=>({
+    'Quote Ref'  : o.order_ref||'',
+    'Customer'   : o.customers?.company_name||'',
+    'Product'    : it.product_name||'',
+    'HSN Code'   : it.hsn_code||'',
+    'Qty'        : parseFloat(it.qty||0),
+    'Unit'       : it.unit||'',
+    'Base Price' : parseFloat(it.base_price||0),
+    'Discount %' : parseFloat(it.discount_pct||0),
+    'GST %'      : parseFloat(it.gst_pct||18),
+  }));
+  try{
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:24},{wch:40},{wch:12},{wch:8},{wch:8},{wch:12},{wch:11},{wch:8}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Order');
+    XLSX.writeFile(wb, `${o.order_ref||'order'}_for_miracle.xlsx`);
+    toast('Excel exported ✓ Ready to import into Miracle');
+  }catch(e){ toast('Error generating Excel'); console.error(e); }
 }
 
 async function loadProducts(){
@@ -606,6 +848,10 @@ function renderDashboard(){
   document.getElementById('dash-sent-list').innerHTML = sent.length
     ? sent.map(q=>quoteRowHtml(q)).join('')
     : '<div class="empty"><i class="ti ti-file-off"></i><p>No sent quotes yet.</p></div>';
+  const storePending = allStoreOrders.filter(o=>o.status==='pending');
+  document.getElementById('dash-store-list').innerHTML = storePending.length
+    ? storePending.map(storeOrderRowHtml).join('')
+    : '<div class="empty"><i class="ti ti-check-circle"></i><p>No store orders waiting.</p></div>';
 }
 
 // ── Quote row HTML ──
