@@ -1,6 +1,6 @@
 {
-  "name": "Raghav Enterprises – HQ",
-  "short_name": "RE HQ",
+  "name": "SUDARSHAN – Raghav Enterprises",
+  "short_name": "SUDARSHAN",
   "description": "HQ dashboard for Raghav Enterprises",
   "start_url": "./index.html",
   "display": "standalone",
@@ -14,6 +14,9 @@
       "type": "image/svg+xml"
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "lang": "en-IN"
 }
