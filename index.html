@@ -1050,7 +1050,8 @@ function sendQuoteWhatsApp(id){
     const taxable = base-discAmt;
     const gstAmt  = taxable*parseFloat(it.gst_pct)/100;
     subBase+=base; subDisc+=discAmt; subGst+=gstAmt;
-    return `  • *${it.product_name}*${it.unit?' ('+it.unit+')':''} × ${it.qty}\n    Base: ${fmt(it.base_price)}/unit${it.disc_pct>0?' − Disc '+it.disc_pct+'%':''} + GST ${it.gst_pct}%\n    Line Total: *${fmt(taxable+gstAmt)}*`;
+    // Client-facing: discounted rate only, never the discount itself
+    return `  • *${it.product_name}*${it.unit?' ('+it.unit+')':''} × ${it.qty}\n    Rate: ${fmt(taxable/parseFloat(it.qty))}/unit + GST ${it.gst_pct}%\n    Line Total: *${fmt(taxable+gstAmt)}*`;
   }).join('\n\n');
 
   const grand = subBase-subDisc+subGst;
