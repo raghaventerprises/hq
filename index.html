@@ -799,30 +799,70 @@ async function saveStoreOrderStatus(id){
   toast('Store order updated ✓');
 }
 
+// ── Miracle export ──
+// One row per item, with the columns of Miracle's Sales Quotation entry screen in
+// the order they appear there: header fields, then the item grid, then the footer.
+// Header and footer values repeat on every row of the same voucher.
+const MIRACLE_COLS = [
+  'Quot. No','Quot. Date','Cash/Debit','Party A/c','Invoice Type','Sale A/c','Doc Date','Doc No',
+  'Executive','ShippingAddress','Po.No.','Po.Date','vehicle no.',
+  'Seq.','Product Name','HSN Code','Sales Unit','Qty','Rate','Tax Paid Rate','Amount',
+  'Pay.Condition','Narration','Disc.','Discount','Freight','Central Tax','State/UT Tax','Cash Disc.','Round Off','Bill Amount'
+];
+function r2(n){ return Math.round((Number(n)||0)*100)/100; }
+function miracleDate(ts){
+  const d = ts ? new Date(ts) : new Date();
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+// v = { ref, date, cashDebit, party, executive, shipping, payCondition, lines:[{name,hsn,unit,qty,price,disc,gst}] }
+function buildMiracleRows(v){
+  // Rate is the net rate before GST, after discount — as Miracle's own quotations carry it
+  const lines = v.lines.map((l,i)=>{
+    const rate = r2(l.price*(1-l.disc/100));
+    return { seq:i+1, name:l.name, hsn:l.hsn, unit:l.unit, qty:l.qty, rate,
+             taxPaid:Math.floor(rate*(1+l.gst/100)*100+1e-6)/100,   // Miracle cuts this to 2 places, it does not round up
+             amount:r2(rate*l.qty), gst:l.gst };
+  });
+  const itemAmount = r2(lines.reduce((a,l)=>a+l.amount,0));
+  // Intra-state: CGST = SGST. Miracle rounds the tax on each line, then adds the lines up.
+  const halfTax    = r2(lines.reduce((a,l)=>a+r2(l.amount*l.gst/200),0));
+  const exact      = r2(itemAmount+halfTax*2);
+  const bill       = Math.round(exact);
+  return lines.map(l=>({
+    'Quot. No':'', 'Quot. Date':v.date, 'Cash/Debit':v.cashDebit, 'Party A/c':v.party,
+    'Invoice Type':'GST', 'Sale A/c':'', 'Doc Date':'', 'Doc No':'',
+    'Executive':v.executive, 'ShippingAddress':v.shipping, 'Po.No.':'', 'Po.Date':'', 'vehicle no.':'',
+    'Seq.':l.seq, 'Product Name':l.name, 'HSN Code':l.hsn, 'Sales Unit':l.unit,
+    'Qty':l.qty, 'Rate':l.rate, 'Tax Paid Rate':l.taxPaid, 'Amount':l.amount,
+    'Pay.Condition':v.payCondition, 'Narration':v.ref,
+    'Disc.':0, 'Discount':0, 'Freight':0, 'Central Tax':halfTax, 'State/UT Tax':halfTax,
+    'Cash Disc.':0, 'Round Off':r2(bill-exact), 'Bill Amount':bill
+  }));
+}
+function writeMiracleFile(v){
+  if(!v.lines.length){ toast('No items to export'); return; }
+  try{
+    const ws = XLSX.utils.json_to_sheet(buildMiracleRows(v), { header: MIRACLE_COLS });
+    ws['!cols'] = MIRACLE_COLS.map(c=>({ wch: c==='Product Name'?46 : (c==='Party A/c'||c==='ShippingAddress')?28 : Math.max(c.length+2,11) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Sales Quotation');
+    XLSX.writeFile(wb, `${v.ref||'voucher'}_miracle.xlsx`);
+    toast('Excel exported ✓ Ready to import into Miracle');
+  }catch(e){ toast('Error generating Excel'); console.error(e); }
+}
+
 function exportStoreOrderToExcel(id){
   const o = window._modalStoreOrder;
   if(!o){ toast('Order not loaded'); return; }
-  const items = o.store_items||[];
-  if(!items.length){ toast('No items to export'); return; }
-  const rows = items.map(it=>({
-    'Quote Ref'  : o.order_ref||'',
-    'Customer'   : o.customers?.company_name||'',
-    'Product'    : it.product_name||'',
-    'HSN Code'   : it.hsn_code||'',
-    'Qty'        : parseFloat(it.qty||0),
-    'Unit'       : it.unit||'',
-    'Base Price' : parseFloat(it.base_price||0),
-    'Discount %' : parseFloat(it.discount_pct||0),
-    'GST %'      : parseFloat(it.gst_pct||18),
-  }));
-  try{
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws['!cols'] = [{wch:14},{wch:24},{wch:40},{wch:12},{wch:8},{wch:8},{wch:12},{wch:11},{wch:8}];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Order');
-    XLSX.writeFile(wb, `${o.order_ref||'order'}_for_miracle.xlsx`);
-    toast('Excel exported ✓ Ready to import into Miracle');
-  }catch(e){ toast('Error generating Excel'); console.error(e); }
+  writeMiracleFile({
+    ref: o.order_ref||'', date: miracleDate(o.created_at),
+    cashDebit: (o.payment_type||'cash')==='credit' ? 'Debit' : 'Cash',
+    party: o.customers?.company_name||'', executive: o.staff_name||'',
+    shipping: o.delivery_mode==='deliver' ? (o.delivery_address||'') : '',
+    payCondition: '',
+    lines: (o.store_items||[]).map(it=>({ name:it.product_name||'', hsn:it.hsn_code||'', unit:it.unit||'',
+      qty:parseFloat(it.qty||0), price:parseFloat(it.base_price||0), disc:parseFloat(it.discount_pct||0), gst:parseFloat(it.gst_pct||18) }))
+  });
 }
 
 async function loadProducts(){
@@ -1315,35 +1355,15 @@ function renderReports(){
 function exportQuoteToExcel(quoteId) {
   const q = window._modalQuote;
   if (!q) { toast('Quote not loaded'); return; }
-  
-  const items = q.quote_items || [];
-  const rows = items.map(it => ({
-    'Quote Ref': q.quote_ref || '',
-    'Customer': q.customers?.company_name || '',
-    'Product': it.product_name || '',
-    'HSN Code': it.hsn_code || '',
-    'Qty': it.qty || 0,
-    'Unit': it.unit || '',
-    'Base Price': it.base_price || 0,
-    'Discount %': it.disc_pct || 0,
-    'GST %': it.gst_pct || 18,
-  }));
-  
-  try {
-    const ws = XLSX.utils.json_to_sheet(rows);
-    // Format columns
-    ws['!cols'] = [
-      {wch:12}, {wch:20}, {wch:20}, {wch:10},
-      {wch:8}, {wch:8}, {wch:12}, {wch:12}, {wch:8}
-    ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Quote');
-    XLSX.writeFile(wb, `${q.quote_ref || 'quote'}_for_miracle.xlsx`);
-    toast('Excel exported ✓ Ready to import into Miracle');
-  } catch(e) {
-    toast('Error generating Excel');
-    console.error(e);
-  }
+  const items = (q.quote_items||[]).slice().sort((x,y)=>(x.sort_order||0)-(y.sort_order||0));
+  writeMiracleFile({
+    ref: q.quote_ref||'', date: miracleDate(q.created_at),
+    cashDebit: 'Debit',
+    party: q.customers?.company_name||'', executive: q.agent_name||'',
+    shipping: '', payCondition: q.hq_notes||'',
+    lines: items.map(it=>({ name:it.product_name||'', hsn:it.hsn_code||'', unit:it.unit||'',
+      qty:parseFloat(it.qty||0), price:parseFloat(it.base_price||0), disc:parseFloat(it.disc_pct||0), gst:parseFloat(it.gst_pct||18) }))
+  });
 }
 
 // ── Boot ──
